@@ -103,7 +103,8 @@ InitRandom (ULong cpu_seed, int nprocs, ULong gpu_seed)
     {
         int tid = OpenMP::get_thread_num();
         ULong init_seed = cpu_seed + tid*nprocs;
-        generators[tid].seed(init_seed);
+        //generators[tid].seed(init_seed);
+        generators.at(tid).seed(init_seed);
     }
 
 #ifdef AMREX_USE_GPU
