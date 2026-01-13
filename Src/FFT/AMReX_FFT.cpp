@@ -43,8 +43,8 @@ void Finalize ()
 #if defined(AMREX_USE_HIP) && defined(AMREX_USE_FFT)
         AMREX_ROCFFT_SAFE_CALL(rocfft_cleanup());
 #elif !defined(AMREX_USE_GPU) && defined(AMREX_USE_OMP) && defined(AMREX_USE_FFT)
-        fftw_cleanup_threads();
-        fftwf_cleanup_threads();
+        //fftw_cleanup_threads();
+        //fftwf_cleanup_threads();
 #endif
     }
 
