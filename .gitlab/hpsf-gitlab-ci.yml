@@ -32,6 +32,13 @@ workflow:
       when: always
     - when: never
 
+# Shared by Tools/CTest/build.cmake and Tools/CTest/submit.cmake
+variables:
+  CMAKE_BUILD_PARALLEL_LEVEL: "16"
+  CDASH_SOURCE_DIR: "$CI_PROJECT_DIR"
+  CDASH_BINARY_DIR: "$CI_PROJECT_DIR/build"
+  CDASH_SITE: "hpsf-gitlab"
+
 .dependency-n-fetch-pr:
   stage: test
   before_script:
@@ -50,6 +57,8 @@ workflow:
 
 Nvidia-H100-single-precision:
   extends: .dependency-n-fetch-pr
+  variables:
+    CDASH_BUILD_NAME: "nvidia-h100-cuda-single"
   tags: [nvidia-h100]
   image: nvcr.io/nvidia/cuda:12.8.0-devel-ubuntu24.04
   script:
@@ -72,7 +81,7 @@ Nvidia-H100-single-precision:
           -DCMAKE_CUDA_ARCHITECTURES=90                \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-    - cmake --build build -j 16
+    - ctest -S "$CI_PROJECT_DIR/Tools/CTest/build.cmake" -V
     - export OMPI_ALLOW_RUN_AS_ROOT=1
     - export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
     - export AMREX_THE_ARENA_INIT_SIZE=1e9
@@ -83,16 +92,14 @@ Nvidia-H100-single-precision:
       status=0
       ctest -j 2 --test-dir build --output-on-failure || status=$?
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
-        CDASH_SOURCE_DIR="$CI_PROJECT_DIR" \
-        CDASH_BINARY_DIR="$CI_PROJECT_DIR/build" \
-        CDASH_BUILD_NAME="nvidia-h100-cuda-single" \
-        CDASH_SITE="hpsf-gitlab" \
         ctest -S "$CI_PROJECT_DIR/Tools/CTest/submit.cmake" || true
       fi
       exit $status
 
 AMD-MI300A:
   extends: .dependency-n-fetch-pr
+  variables:
+    CDASH_BUILD_NAME: "amd-mi300a-hip"
   tags: [amd-mi300]
   image: rocm/dev-ubuntu-24.04:7.2-complete
   script:
@@ -115,7 +122,7 @@ AMD-MI300A:
           -DAMReX_AMD_ARCH=gfx942                      \
           -DCMAKE_C_COMPILER=$(which amdclang)         \
           -DCMAKE_CXX_COMPILER=$(which amdclang++)
-    - cmake --build build -j 16
+    - ctest -S "$CI_PROJECT_DIR/Tools/CTest/build.cmake" -V
     - export OMPI_ALLOW_RUN_AS_ROOT=1
     - export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
     - export AMREX_THE_ARENA_INIT_SIZE=1e9
@@ -126,16 +133,14 @@ AMD-MI300A:
       status=0
       ctest -j 2 --test-dir build --output-on-failure || status=$?
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
-        CDASH_SOURCE_DIR="$CI_PROJECT_DIR" \
-        CDASH_BINARY_DIR="$CI_PROJECT_DIR/build" \
-        CDASH_BUILD_NAME="amd-mi300a-hip" \
-        CDASH_SITE="hpsf-gitlab" \
         ctest -S "$CI_PROJECT_DIR/Tools/CTest/submit.cmake" || true
       fi
       exit $status
 
 Intel-PVC:
   extends: .dependency-n-fetch-pr
+  variables:
+    CDASH_BUILD_NAME: "intel-pvc-sycl"
   tags: [intel-data-center-max-1100]
   image: intel/oneapi:2026.1.0-devel-ubuntu24.04
   script:
@@ -156,7 +161,7 @@ Intel-PVC:
           -DCMAKE_CXX_COMPILER=$(which icpx)           \
           -DCMAKE_CXX_FLAGS="-fp-model=precise"        \
           -DAMReX_PARALLEL_LINK_JOBS=8
-    - cmake --build build -j 16
+    - ctest -S "$CI_PROJECT_DIR/Tools/CTest/build.cmake" -V
     - export AMREX_THE_ARENA_INIT_SIZE=1e9
     # Publish nightly results to https://my.cdash.org/index.php?project=AMReX
     # Scheduled pipelines only. Submits even when the tests failed, then exits
@@ -165,10 +170,6 @@ Intel-PVC:
       status=0
       ctest -j 4 --test-dir build --output-on-failure || status=$?
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
-        CDASH_SOURCE_DIR="$CI_PROJECT_DIR" \
-        CDASH_BINARY_DIR="$CI_PROJECT_DIR/build" \
-        CDASH_BUILD_NAME="intel-pvc-sycl" \
-        CDASH_SITE="hpsf-gitlab" \
         ctest -S "$CI_PROJECT_DIR/Tools/CTest/submit.cmake" || true
       fi
       exit $status

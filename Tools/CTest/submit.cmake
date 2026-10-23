@@ -4,8 +4,10 @@
 #   ctest -S /path/to/amrex/Tools/CTest/submit.cmake [-C <config>]
 #
 # The build must already be configured and built; multi-config generators
-# such as Visual Studio need -C <config>. Driven by environment
-# variables so the same script serves GitHub Actions and GitLab CI:
+# such as Visual Studio need -C <config>. If the build was done with
+# build.cmake, the test results are recorded under the same dashboard TAG so
+# that CDash also shows the build time, warnings and errors. Driven by
+# environment variables so the same script serves GitHub Actions and GitLab CI:
 #
 #   CDASH_SOURCE_DIR   top of the AMReX source tree
 #   CDASH_BINARY_DIR   the configured build directory
@@ -17,25 +19,15 @@
 # The token is passed through the CTest API rather than the --http-header
 # command-line option, which needs CMake 3.29; the GPU images ship 3.28.
 
-cmake_minimum_required(VERSION 3.25)
+include(${CMAKE_CURRENT_LIST_DIR}/common.cmake)
 
-foreach(var SOURCE_DIR BINARY_DIR BUILD_NAME SITE)
-    if(NOT DEFINED ENV{CDASH_${var}})
-        message(FATAL_ERROR "CDASH_${var} is not set")
-    endif()
-endforeach()
-
-set(CTEST_SOURCE_DIRECTORY "$ENV{CDASH_SOURCE_DIR}")
-set(CTEST_BINARY_DIRECTORY "$ENV{CDASH_BINARY_DIR}")
-set(CTEST_BUILD_NAME       "$ENV{CDASH_BUILD_NAME}")
-set(CTEST_SITE             "$ENV{CDASH_SITE}")
-
-set(track "$ENV{CDASH_TRACK}")
-if(NOT track)
-    set(track Nightly)
+# Reuse the TAG written by build.cmake, if any, so Build.xml is submitted too
+set(append "")
+if(EXISTS "${CTEST_BINARY_DIRECTORY}/Testing/TAG")
+    set(append APPEND)
 endif()
 
-ctest_start("${track}")
+ctest_start("${track}" ${append})
 ctest_test(RETURN_VALUE test_result)
 
 set(submit_args "")

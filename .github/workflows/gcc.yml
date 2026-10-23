@@ -96,6 +96,13 @@ jobs:
     runs-on: ubuntu-24.04
     needs: check_changes
     if: needs.check_changes.outputs.has_non_docs_changes == 'true'
+    env:
+      # Shared by Tools/CTest/build.cmake and Tools/CTest/submit.cmake
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+      CDASH_SOURCE_DIR: ${{ github.workspace }}
+      CDASH_BINARY_DIR: ${{ github.workspace }}/build
+      CDASH_BUILD_NAME: ubuntu-gcc-debug-3d
+      CDASH_SITE: github-actions
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Dependencies
@@ -135,7 +142,7 @@ jobs:
             -DAMReX_FORTRAN_INTERFACES=ON \
             -DAMReX_SPACEDIM=3          \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        cmake --build build -j 4
+        ctest -S ${{ github.workspace }}/Tools/CTest/build.cmake -V
 
         ctest --test-dir build --output-on-failure
 
@@ -159,10 +166,6 @@ jobs:
       if: ${{ !cancelled() && github.event_name == 'push' && github.repository == 'AMReX-Codes/amrex' }}
       continue-on-error: true
       env:
-        CDASH_SOURCE_DIR: ${{ github.workspace }}
-        CDASH_BINARY_DIR: ${{ github.workspace }}/build
-        CDASH_BUILD_NAME: ubuntu-gcc-debug-3d
-        CDASH_SITE: github-actions
         CDASH_AUTH_TOKEN: ${{ secrets.CDASH_AUTH_TOKEN }}
       run: ctest -S ${{ github.workspace }}/Tools/CTest/submit.cmake
 
